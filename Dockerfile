@@ -1,14 +1,13 @@
-FROM alpine:edge
+FROM python:alpine as builder
+ADD . .
+RUN python setup.py bdist_wheel
 
-ADD ./ /tmp/install/
-
-RUN apk update && \
-    apk add python3 python3-dev musl-dev curl curl-dev gcc && \
-    cd /tmp/install && \
-    curl -O https://bootstrap.pypa.io/get-pip.py && \
-    python3 get-pip.py && \
-    pip3 install -e .
-
+FROM python:alpine
+COPY --from=builder /dist /dist
+RUN apk add curl && \
+    apk add -t .dev curl-dev gcc musl-dev && \
+    pip install /dist/*whl && \
+    apk del .dev && \
+    rm -rf /var/cache/apk/* ~/.cache
 EXPOSE 80
-
 CMD aufseher
