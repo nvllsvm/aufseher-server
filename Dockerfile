@@ -1,13 +1,13 @@
 FROM python:alpine as builder
+WORKDIR /repo
 ADD . .
 RUN python setup.py bdist_wheel
 
 FROM python:alpine
-COPY --from=builder /dist /dist
-RUN apk add curl && \
-    apk add -t .dev curl-dev gcc musl-dev && \
-    pip install /dist/*whl && \
-    apk del .dev && \
-    rm -rf /var/cache/apk/* ~/.cache
+COPY --from=builder /repo/dist /dist
+RUN apk add --no-cache curl && \
+    apk add --no-cache -t .dev curl-dev gcc musl-dev && \
+    pip install --no-cache-dir /dist/*whl && \
+    apk del .dev
 EXPOSE 80
 CMD aufseher
