@@ -25,10 +25,7 @@ class LightStrip(object):
         self.group = group
         self.name = name
         self.url = url
-        if colors == 'rgbw':
-            self.has_white = True
-        else:
-            self.has_white = False
+        self.has_white = colors == 'rgbw'
 
     def build_body(self, body):
         mode = body['mode']
