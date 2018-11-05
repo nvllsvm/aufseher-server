@@ -12,6 +12,6 @@ setuptools.setup(
     entry_points={
         'console_scripts': ['aufseher = aufseher:main']
     },
-    setuptools_requires=['setuptools_scm'],
-    use_setuptools_scm=True
+    setup_requires=['setuptools_scm'],
+    use_scm_version=True
 )

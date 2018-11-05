@@ -1,7 +1,8 @@
 FROM python:alpine as builder
 WORKDIR /repo
 ADD . .
-RUN python setup.py bdist_wheel
+RUN apk add --no-cache git && \
+    python setup.py bdist_wheel
 
 FROM python:alpine
 COPY --from=builder /repo/dist /dist
