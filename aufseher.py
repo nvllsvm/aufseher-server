@@ -3,6 +3,7 @@ import collections
 import json
 import logging
 import os
+import pathlib
 
 from tornado import ioloop, httpclient, web
 import yaml
@@ -11,9 +12,8 @@ logging.basicConfig(level=logging.INFO)
 
 
 def load_config():
-    path = os.environ.get('CONFIG_FILE', 'config.yml')
-    with open(path) as f:
-        return yaml.load(f)
+    path = pathlib.Path(os.environ.get('CONFIG_FILE', 'config.yml'))
+    return yaml.load(path.read_text())
 
 
 httpclient.AsyncHTTPClient.configure(
