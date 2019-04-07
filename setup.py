@@ -5,9 +5,8 @@ setuptools.setup(
     name='aufseher',
     version='0.0.0',
     install_requires=[
-        'tornado>=6',
-        'pycurl',
-        'pyyaml'
+        'aiohttp',
+        'pyyaml',
     ],
     packages=['aufseher'],
     entry_points={

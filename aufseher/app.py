@@ -1,15 +1,11 @@
 import asyncio
 import collections
-import json
 import logging
 
-from tornado import httpclient, web
+import aiohttp
+import aiohttp.web
 
 logging.basicConfig(level=logging.INFO)
-
-
-httpclient.AsyncHTTPClient.configure(
-    'tornado.curl_httpclient.CurlAsyncHTTPClient')
 
 
 class LightStrip:
@@ -51,57 +47,56 @@ class LightStrip:
         return new_body
 
 
-class LightsHandler(web.RequestHandler):
-    def initialize(self):
-        if not hasattr(self, 'client'):
-            self.client = httpclient.AsyncHTTPClient()
-
-    def prepare(self):
-        auth_key = self.settings['authorization']
-        try:
-            if self.request.headers['Authorization'] != auth_key:
-                raise ValueError
-        except (KeyError, ValueError):
-            raise web.HTTPError(401)
+class LightsHandler(aiohttp.web.View):
+    def check(self):
+        auth_key = self.request.app['authorization']
+        if self.request.headers.get('Authorization') != auth_key:
+            raise aiohttp.web.HTTPBadRequest
 
     async def put(self):
-        body = json.loads(self.request.body)
+        self.check()
+        body = await self.request.json()
 
         request_strips = body.get('strips', None)
         if request_strips is None:
-            request_strips = self.settings['strips'].keys()
+            request_strips = self.request.app['strips'].keys()
         elif isinstance(request_strips, list):
             if len(request_strips) == 0:
-                raise web.HTTPError(400)
+                raise aiohttp.web.HTTPBadRequest
             for value in request_strips:
                 if not isinstance(value, str):
-                    raise web.HTTPError(400)
+                    raise aiohttp.web.HTTPBadRequest
         else:
-            raise web.HTTPError(400)
+            raise aiohttp.web.HTTPBadRequest
 
         strips = []
-        for strip in self.application.all_strips:
+        for strip in self.request.app['all_strips']:
             if strip.group in request_strips:
                 strips.append(strip)
 
         await self.multi_request(strips, 'PUT', body)
-        self.set_status(204)
+        raise aiohttp.web.HTTPNoContent
 
     async def get(self):
-        responses = await self.multi_request(self.application.all_strips,
+        v = self.check()
+        if v:
+            return v
+        responses = await self.multi_request(self.request.app['all_strips'],
                                              'GET')
 
         body = collections.defaultdict(dict)
 
-        for strip, response in responses:
-            if response.code == 200:
-                body['strips'][strip.name] = response.json
+        for response in responses:
+            if response['status'] == 200:
+                body['strips'][response['strip'].name] = response['json']
             else:
-                body['errors'][strip.name] = {'code': response.code,
-                                              'body': response.json}
-                self.set_status(500)
+                body['errors'][response['strip'].name] = {
+                    'code': response['status'],
+                    'body': response['json']
+                }
+                raise aiohttp.web.HTTPInternalServerError
 
-        self.write(body)
+        return aiohttp.web.json_response(body)
 
     async def multi_request(self, strips, *args, **kwargs):
         futures = []
@@ -112,16 +107,19 @@ class LightsHandler(web.RequestHandler):
         return results
 
     async def strip_request(self, strip, method, body=None):
+        kwargs = {
+            'url': strip.url,
+            'method': method
+        }
         if body is not None:
-            body = json.dumps(strip.build_body(body))
+            kwargs['json'] = strip.build_body(body)
 
-        response = await self.client.fetch(
-            strip.url,
-            method=method,
-            body=body,
-            connect_timeout=self.settings['http_timeout'],
-            request_timeout=self.settings['http_timeout'])
-
-        response.json = json.loads(response.body)
-
-        return strip, response
+        async with aiohttp.ClientSession() as session:
+            async with session.request(**kwargs) as response:
+                d = await response.json()
+                result = {
+                    'json': d,
+                    'status': response.status,
+                    'strip': strip
+                }
+        return result
