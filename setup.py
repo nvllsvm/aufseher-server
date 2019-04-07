@@ -9,8 +9,8 @@ setuptools.setup(
         'pycurl',
         'pyyaml'
     ],
-    py_modules=['aufseher'],
+    packages=['aufseher'],
     entry_points={
-        'console_scripts': ['aufseher = aufseher:main']
+        'console_scripts': ['aufseher = aufseher.__main__:main']
     }
 )

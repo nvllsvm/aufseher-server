@@ -2,18 +2,10 @@ import asyncio
 import collections
 import json
 import logging
-import os
-import pathlib
 
-from tornado import ioloop, httpclient, web
-import yaml
+from tornado import httpclient, web
 
 logging.basicConfig(level=logging.INFO)
-
-
-def load_config():
-    path = pathlib.Path(os.environ.get('CONFIG_FILE', 'config.yml'))
-    return yaml.load(path.read_text())
 
 
 httpclient.AsyncHTTPClient.configure(
@@ -133,29 +125,3 @@ class LightsHandler(web.RequestHandler):
         response.json = json.loads(response.body)
 
         return strip, response
-
-
-def make_app():
-    app = web.Application([
-        ('/lights', LightsHandler)],
-        autoreload=True,
-        **load_config())
-
-    all_strips = []
-    for group, strips in app.settings['strips'].items():
-        for name, data in strips.items():
-            all_strips.append(LightStrip(group, name, **data))
-
-    app.all_strips = all_strips
-
-    return app
-
-
-def main():
-    app = make_app()
-    app.listen(os.environ.get('PORT', 80))
-    ioloop.IOLoop.current().start()
-
-
-if __name__ == '__main__':
-    main()
