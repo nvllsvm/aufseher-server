@@ -20,7 +20,7 @@ httpclient.AsyncHTTPClient.configure(
     'tornado.curl_httpclient.CurlAsyncHTTPClient')
 
 
-class LightStrip(object):
+class LightStrip:
     def __init__(self, group, name, url, colors):
         self.group = group
         self.name = name
