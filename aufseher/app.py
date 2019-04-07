@@ -99,14 +99,14 @@ class LightsHandler(aiohttp.web.View):
         return aiohttp.web.json_response(body)
 
     async def multi_request(self, strips, *args, **kwargs):
-        futures = []
-        for strip in strips:
-            futures.append(self.strip_request(strip, *args, **kwargs))
-
-        results = await asyncio.gather(*futures)
+        async with aiohttp.ClientSession() as session:
+            results = await asyncio.gather(*[
+                self.strip_request(session, strip, *args, **kwargs)
+                for strip in strips
+            ])
         return results
 
-    async def strip_request(self, strip, method, body=None):
+    async def strip_request(self, session, strip, method, body=None):
         kwargs = {
             'url': strip.url,
             'method': method
@@ -114,12 +114,11 @@ class LightsHandler(aiohttp.web.View):
         if body is not None:
             kwargs['json'] = strip.build_body(body)
 
-        async with aiohttp.ClientSession() as session:
-            async with session.request(**kwargs) as response:
-                d = await response.json()
-                result = {
-                    'json': d,
-                    'status': response.status,
-                    'strip': strip
-                }
+        async with session.request(**kwargs) as response:
+            d = await response.json()
+            result = {
+                'json': d,
+                'status': response.status,
+                'strip': strip
+            }
         return result
