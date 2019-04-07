@@ -16,7 +16,7 @@ def main():
     app = aiohttp.web.Application()
     app.add_routes([aiohttp.web.view('/lights', aufseher.app.LightsHandler)])
 
-    app.update(yaml.load(CONFIG_PATH.read_text()))
+    app.update(yaml.safe_load(CONFIG_PATH.read_text()))
 
     all_strips = []
     for group, strips in app['strips'].items():
