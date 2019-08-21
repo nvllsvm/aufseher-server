@@ -1,22 +1,22 @@
+import json
 import logging
 import os
 import pathlib
 
 import aiohttp.web
-import yaml
 
 import aufseher.app
 
 logging.basicConfig(level=logging.INFO)
 
-CONFIG_PATH = pathlib.Path(os.environ.get('CONFIG_FILE', 'config.yml'))
+CONFIG_PATH = pathlib.Path(os.environ.get('CONFIG_FILE', 'config.json'))
 
 
 def main():
     app = aiohttp.web.Application()
     app.add_routes([aiohttp.web.view('/lights', aufseher.app.LightsHandler)])
 
-    app.update(yaml.safe_load(CONFIG_PATH.read_text()))
+    app.update(json.loads(CONFIG_PATH.read_text()))
 
     all_strips = []
     for group, strips in app['strips'].items():
