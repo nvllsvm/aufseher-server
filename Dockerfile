@@ -7,7 +7,9 @@ RUN python setup.py bdist_wheel
 
 FROM base
 COPY --from=builder /src/dist /dist
-RUN pip install --no-cache-dir /dist/*whl \
+RUN apk add --no-cache -t build gcc musl-dev \
+ && pip install --no-cache-dir /dist/*whl \
+ && apk del build \
  && rm -r /dist
 EXPOSE 80
 CMD aufseher
