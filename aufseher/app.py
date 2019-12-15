@@ -1,11 +1,16 @@
 import asyncio
 import collections
+import os
 import logging
 
 import aiohttp
 import aiohttp.web
 
-logging.basicConfig(level=logging.INFO)
+
+logLevel = logging.DEBUG if os.environ.get('DEBUG') else logging.INFO
+logging.basicConfig(level=logLevel)
+
+LOGGER = logging.getLogger(__package__)
 
 
 class LightStrip:
@@ -34,6 +39,7 @@ class LightStrip:
         else:
             new_body = self.build_new_body(body)
 
+        LOGGER.debug('build_body: %s', new_body)
         return new_body
 
     def build_new_body(self, body, *keys):
@@ -44,6 +50,7 @@ class LightStrip:
             if value is not None:
                 new_body[key] = value
 
+        LOGGER.debug('build_new_body: %s', new_body)
         return new_body
 
 
@@ -56,6 +63,7 @@ class LightsHandler(aiohttp.web.View):
     async def put(self):
         self.check()
         body = await self.request.json()
+        LOGGER.debug('received body %s', body)
 
         request_strips = body.get('strips', None)
         if request_strips is None:
@@ -107,18 +115,20 @@ class LightsHandler(aiohttp.web.View):
         return results
 
     async def strip_request(self, session, strip, method, body=None):
-        kwargs = {
-            'url': strip.url,
-            'method': method
-        }
+        kwargs = {}
         if body is not None:
             kwargs['json'] = strip.build_body(body)
 
-        async with session.request(**kwargs) as response:
+        LOGGER.debug('kwargs %s', kwargs)
+        async with session.request(method, strip.url, **kwargs) as response:
             d = await response.json()
             result = {
                 'json': d,
                 'status': response.status,
                 'strip': strip
             }
+            if response.status != 200:
+                LOGGER.error('status %s %s', response.status,
+                             await response.text())
+                raise aiohttp.web.HTTPInternalServerError
         return result
